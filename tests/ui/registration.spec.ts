@@ -124,54 +124,55 @@ test.describe('Registration Tests @auth', () => {
     await expect(basePage.appShell).toBeVisible();
   });
 
-  test('Registration with very long name (200 characters)', async ({ loginPage, basePage }) => {
-    const longName = 'A'.repeat(200);
+  test('Registration with name exceeding 10 characters fails', async ({ loginPage }) => {
+    const longName = 'A'.repeat(11);
     const uniqueEmail = `longname_${Date.now()}@test.com`;
     await loginPage.registerNameInput.fill(longName);
     await loginPage.registerEmailInput.fill(uniqueEmail);
     await loginPage.registerPasswordInput.fill('LongNamePass1!');
     await loginPage.registerButton.click();
+    await loginPage.verifyRegisterErrorVisible('Name cannot exceed 10 characters');
+  });
+
+  test('Registration with exactly 10-character name succeeds', async ({ loginPage, basePage }) => {
+    const tenCharName = 'A'.repeat(10);
+    const uniqueEmail = `tenname_${Date.now()}@test.com`;
+    await loginPage.registerNameInput.fill(tenCharName);
+    await loginPage.registerEmailInput.fill(uniqueEmail);
+    await loginPage.registerPasswordInput.fill('TenNamePass1!');
+    await loginPage.registerButton.click();
     await expect(basePage.appShell).toBeVisible();
   });
 
   // ═══════════════════════════════════════════════════════════
-  // SPECIAL CHARACTERS
+  // SPECIAL CHARACTERS & VALIDATION
   // ═══════════════════════════════════════════════════════════
 
-  test('Registration with special characters in name', async ({ loginPage, basePage }) => {
+  test('Registration fails with special characters in name', async ({ loginPage }) => {
     const uniqueEmail = `special_${Date.now()}@test.com`;
-    await loginPage.registerNameInput.fill("O'Brien-Smith Jr.");
+    await loginPage.registerNameInput.fill("O'Brien");
     await loginPage.registerEmailInput.fill(uniqueEmail);
     await loginPage.registerPasswordInput.fill('SpecialPass1!');
     await loginPage.registerButton.click();
-    await expect(basePage.appShell).toBeVisible();
+    await loginPage.verifyRegisterErrorVisible('Name contains invalid characters');
   });
 
-  test('Registration with SQL injection in name field', async ({ loginPage, basePage }) => {
+  test('Registration fails with SQL injection in name field', async ({ loginPage }) => {
     const uniqueEmail = `sqli_${Date.now()}@test.com`;
-    await loginPage.registerNameInput.fill("'; DROP TABLE users; --");
+    await loginPage.registerNameInput.fill("'; DROP--");
     await loginPage.registerEmailInput.fill(uniqueEmail);
     await loginPage.registerPasswordInput.fill('SQLiPass123!');
     await loginPage.registerButton.click();
-    await expect(basePage.appShell).toBeVisible();
+    await loginPage.verifyRegisterErrorVisible('Name contains invalid characters');
   });
 
-  test('Registration with XSS script in name field', async ({ loginPage, basePage }) => {
+  test('Registration fails with XSS script in name field', async ({ loginPage }) => {
     const uniqueEmail = `xss_${Date.now()}@test.com`;
-    await loginPage.registerNameInput.fill('<script>alert("xss")</script>');
+    await loginPage.registerNameInput.fill('<script>');
     await loginPage.registerEmailInput.fill(uniqueEmail);
     await loginPage.registerPasswordInput.fill('XSSPass123!');
     await loginPage.registerButton.click();
-    await expect(basePage.appShell).toBeVisible();
-  });
-
-  test('Registration with unicode characters in name', async ({ loginPage, basePage }) => {
-    const uniqueEmail = `unicode_${Date.now()}@test.com`;
-    await loginPage.registerNameInput.fill('Ñoño Müller 日本語');
-    await loginPage.registerEmailInput.fill(uniqueEmail);
-    await loginPage.registerPasswordInput.fill('UnicodePass1!');
-    await loginPage.registerButton.click();
-    await expect(basePage.appShell).toBeVisible();
+    await loginPage.verifyRegisterErrorVisible('Name contains invalid characters');
   });
 
   // ═══════════════════════════════════════════════════════════
