@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Database files
+app/data/*.db
+app/data/*.db-wal
+app/data/*.db-shm
+
+# Uploaded files
+app/uploads/
+
+# Test reports & artifacts
+test-results/
+playwright-report/
+allure-results/
+allure-report/
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store
+
+# Environment
+.env
+
+# Logs
+*.log
+npm-debug.log*
