@@ -2,7 +2,6 @@ import { test, expect } from '../../src/core/fixtures/custom-fixtures';
 import { config } from '../../src/core/config/env.config';
 
 test.describe('Dashboard Tests @dashboard', () => {
-  test.describe.configure({ mode: 'serial' });
   let createdTaskIds: number[] = [];
 
   test.beforeEach(async ({ loginPage, dashboardPage }) => {

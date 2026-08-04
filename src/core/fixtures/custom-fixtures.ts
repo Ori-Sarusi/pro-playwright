@@ -2,6 +2,7 @@ import { test as base } from '@playwright/test';
 import { LoginPage } from '../../pages/login.page';
 import { BasePage } from '../../pages/base.page';
 import { DashboardPage } from '../../pages/dashboard.page';
+import { TaskBoardPage } from '../../pages/taskBoard.page';
 import { TaskModalPage } from '../../pages/taskModal.page';
 import { TasksApiHelper } from '../../api/tasks.api';
 
@@ -10,6 +11,7 @@ export type CustomFixtures = {
   loginPage: LoginPage;
   basePage: BasePage;
   dashboardPage: DashboardPage;
+  taskBoardPage: TaskBoardPage;
   taskModalPage: TaskModalPage;
   tasksApi: TasksApiHelper;
 };
@@ -26,6 +28,10 @@ export const test = base.extend<CustomFixtures>({
 
   dashboardPage: async ({ page }, use) => {
     await use(new DashboardPage(page));
+  },
+
+  taskBoardPage: async ({ page }, use) => {
+    await use(new TaskBoardPage(page));
   },
 
   taskModalPage: async ({ page }, use) => {
