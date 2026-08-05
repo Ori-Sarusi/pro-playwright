@@ -4,6 +4,7 @@ import { BasePage } from '../../pages/base.page';
 import { DashboardPage } from '../../pages/dashboard.page';
 import { TaskBoardPage } from '../../pages/taskBoard.page';
 import { TaskListPage } from '../../pages/taskList.page';
+import { SettingsPage } from '../../pages/settings.page';
 import { TaskModalPage } from '../../pages/taskModal.page';
 import { TasksApiHelper } from '../../api/tasks.api';
 
@@ -14,6 +15,7 @@ export type CustomFixtures = {
   dashboardPage: DashboardPage;
   taskBoardPage: TaskBoardPage;
   taskListPage: TaskListPage;
+  settingsPage: SettingsPage;
   taskModalPage: TaskModalPage;
   tasksApi: TasksApiHelper;
 };
@@ -38,6 +40,10 @@ export const test = base.extend<CustomFixtures>({
 
   taskListPage: async ({ page }, use) => {
     await use(new TaskListPage(page));
+  },
+
+  settingsPage: async ({ page }, use) => {
+    await use(new SettingsPage(page));
   },
 
   taskModalPage: async ({ page }, use) => {
