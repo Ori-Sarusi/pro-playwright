@@ -117,4 +117,19 @@ export class TasksApiHelper {
       }
     }
   }
+
+  /**
+   * Delete ALL existing tasks via API to reset database for isolated tests
+   */
+  async deleteAllTasks(): Promise<void> {
+    if (!this.authToken) await this.login();
+    const response = await this.requestContext.get(`${config.baseUrl}/api/v1/tasks?limit=500`, {
+      headers: this.getHeaders(),
+    });
+    if (response.ok()) {
+      const data = await response.json();
+      const allIds = data.data.map((t: any) => t.id);
+      await this.deleteTasks(allIds);
+    }
+  }
 }
