@@ -2,7 +2,7 @@ import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from './base.page';
 
 export interface TaskFormData {
-  title: string;
+  title?: string;
   description?: string;
   status?: 'todo' | 'in-progress' | 'done';
   priority?: 'low' | 'medium' | 'high' | 'critical';
@@ -59,7 +59,9 @@ export class TaskModalPage extends BasePage {
   }
 
   async fillTaskForm(data: TaskFormData): Promise<void> {
-    await this.titleInput.fill(data.title);
+    if (data.title !== undefined) {
+      await this.titleInput.fill(data.title);
+    }
     if (data.description !== undefined) {
       await this.descriptionInput.fill(data.description);
     }
