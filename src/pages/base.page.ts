@@ -74,6 +74,10 @@ export class BasePage {
     await expect(this.pageTitle).toHaveText(expectedTitle);
   }
 
+  async verifyUsersNavVisible(): Promise<void> {
+    await expect(this.navUsers).toBeVisible();
+  }
+
   // ─── New Task ───────────────────────────────────────────
 
   async clickNewTask(): Promise<void> {

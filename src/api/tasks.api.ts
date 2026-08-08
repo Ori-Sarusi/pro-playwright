@@ -28,7 +28,7 @@ export interface TaskApiResponse {
  */
 export class TasksApiHelper {
   private requestContext: APIRequestContext;
-  private authToken: string | null = null;
+  public authToken: string | null = null;
 
   constructor(requestContext: APIRequestContext) {
     this.requestContext = requestContext;
@@ -130,6 +130,29 @@ export class TasksApiHelper {
       const data = await response.json();
       const allIds = data.data.map((t: any) => t.id);
       await this.deleteTasks(allIds);
+    }
+  }
+
+  /**
+   * Delete test created users via API cleanup helper, preserving Admin and Ori
+   */
+  async cleanupTestUsers(): Promise<void> {
+    if (!this.authToken) await this.login();
+    const response = await this.requestContext.get(`${config.baseUrl}/api/v1/users`, {
+      headers: this.getHeaders(),
+    });
+    if (response.ok()) {
+      const data = await response.json();
+      const usersToDelete = data.data.filter((u: any) => u.email !== 'admin@taskflow.com' && !u.name.includes('Ori'));
+      for (const user of usersToDelete) {
+        try {
+          await this.requestContext.delete(`${config.baseUrl}/api/v1/users/${user.id}`, {
+            headers: this.getHeaders(),
+          });
+        } catch (e) {
+          // Ignore individual delete failures during teardown
+        }
+      }
     }
   }
 }
