@@ -28,11 +28,6 @@ jobs:
       - name: Install Chromium browser only
         run: npx playwright install chromium --with-deps
 
-      - name: Start TaskFlow Pro application server
-        run: |
-          npm run app:start &
-          npx --yes wait-on http://localhost:3000
-
       - name: Execute Playwright UI test suite on Chromium
         run: npx playwright test --project=chromium
 
