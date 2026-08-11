@@ -6,7 +6,6 @@ import path from 'path';
  */
 export default defineConfig({
   testDir: './tests',
-  testDir: './tests',
   /* Run tests in files in sequence (single worker to prevent DB state conflicts) */
   fullyParallel: false,
   workers: 1,
