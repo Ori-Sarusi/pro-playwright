@@ -48,6 +48,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
+  const rememberMe = document.getElementById('remember-me').checked;
   const errorEl = document.getElementById('login-error');
 
   try {
@@ -64,6 +65,15 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     }
     token = data.token;
     currentUser = data.user;
+
+    if (rememberMe) {
+      localStorage.setItem('taskflow_token', token);
+      localStorage.setItem('taskflow_user', JSON.stringify(currentUser));
+    } else {
+      sessionStorage.setItem('taskflow_token', token);
+      sessionStorage.setItem('taskflow_user', JSON.stringify(currentUser));
+    }
+
     enterApp();
   } catch (err) {
     errorEl.textContent = 'Network error. Please try again.';
@@ -128,11 +138,17 @@ function enterApp() {
 function logout() {
   token = null;
   currentUser = null;
+  localStorage.removeItem('taskflow_token');
+  localStorage.removeItem('taskflow_user');
+  sessionStorage.removeItem('taskflow_token');
+  sessionStorage.removeItem('taskflow_user');
+
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('auth-view').style.display = 'flex';
   // Clear login form fields
   document.getElementById('login-email').value = '';
   document.getElementById('login-password').value = '';
+  document.getElementById('remember-me').checked = false;
   document.getElementById('login-error').style.display = 'none';
 
   // Clear registration form fields and reset to login view
@@ -143,6 +159,21 @@ function logout() {
   document.getElementById('register-form').style.display = 'none';
   document.getElementById('login-form').style.display = 'block';
 }
+
+function initAuth() {
+  const savedToken = localStorage.getItem('taskflow_token') || sessionStorage.getItem('taskflow_token');
+  const savedUser = localStorage.getItem('taskflow_user') || sessionStorage.getItem('taskflow_user');
+  if (savedToken && savedUser) {
+    try {
+      token = savedToken;
+      currentUser = JSON.parse(savedUser);
+      enterApp();
+    } catch (e) {
+      logout();
+    }
+  }
+}
+document.addEventListener('DOMContentLoaded', initAuth);
 document.getElementById('logout-btn').addEventListener('click', logout);
 
 // ─────────────────────────────────────────────────────────────
