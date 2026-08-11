@@ -161,9 +161,9 @@ function logout() {
 }
 
 function initAuth() {
-  const savedToken = localStorage.getItem('taskflow_token') || sessionStorage.getItem('taskflow_token');
-  const savedUser = localStorage.getItem('taskflow_user') || sessionStorage.getItem('taskflow_user');
-  if (savedToken && savedUser) {
+  const savedToken = sessionStorage.getItem('taskflow_token') || localStorage.getItem('taskflow_token');
+  const savedUser = sessionStorage.getItem('taskflow_user') || localStorage.getItem('taskflow_user');
+  if (savedToken && savedUser && !token) {
     try {
       token = savedToken;
       currentUser = JSON.parse(savedUser);
