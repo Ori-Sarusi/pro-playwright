@@ -281,6 +281,12 @@ function setupDragAndDrop(container, status) {
     container.style.background = '';
     const taskId = e.dataTransfer.getData('text/plain');
     if (!taskId) return;
+
+    const originalCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+    if (originalCard && originalCard.closest('.cards-container') === container) {
+      return;
+    }
+
     const res = await apiFetch(`/tasks/${taskId}`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
@@ -348,34 +354,24 @@ document.getElementById('bulk-delete-btn').addEventListener('click', async () =>
   for (const id of selectedTaskIds) {
     await apiFetch(`/tasks/${id}`, { method: 'DELETE' });
   }
-  showToast(`Deleted ${selectedTaskIds.size} tasks`);
   selectedTaskIds.clear();
   updateBulkBar();
   loadTaskList();
 });
 
-async function loadTaskList() {
-  const search = document.getElementById('search-input').value;
-  const status = document.getElementById('filter-status').value;
-  const priority = document.getElementById('filter-priority').value;
-
-  let url = `/tasks?page=${listPage}&limit=10&sort=${listSort}&order=${listOrder}`;
-  if (search) url += `&search=${encodeURIComponent(search)}`;
-  if (status) url += `&status=${status}`;
-  if (priority) url += `&priority=${priority}`;
-
-  const res = await apiFetch(url);
-  if (!res) return;
-  const data = await res.json();
-
-  const tbody = document.getElementById('tasks-table-body');
-  tbody.innerHTML = data.data.map(t => `
+function renderTaskRows(data) {
+  const tbody = document.getElementById('task-table-body');
+  tbody.innerHTML = data.map(t => `
     <tr data-testid="task-row-${t.id}">
-      <td><input type="checkbox" class="row-checkbox" data-task-id="${t.id}" data-testid="task-checkbox-${t.id}" ${selectedTaskIds.has(t.id) ? 'checked' : ''} /></td>
-      <td><a href="#" class="task-link" onclick="openTaskDetail(${t.id}); return false;" data-testid="task-link-${t.id}">${t.title}</a></td>
+      <td>
+        <input type="checkbox" class="row-checkbox" data-task-id="${t.id}" data-testid="task-checkbox-${t.id}" ${selectedTaskIds.has(t.id) ? 'checked' : ''} />
+      </td>
+      <td>
+        <a href="#" onclick="event.preventDefault(); openTaskDetail(${t.id})" data-testid="task-title-${t.id}" style="font-weight:600; color:var(--accent); text-decoration:none;">${t.title}</a>
+      </td>
       <td><span class="badge badge-${t.status}">${t.status}</span></td>
       <td><span class="badge badge-${t.priority}">${t.priority}</span></td>
-      <td>${t.assignee_name || '—'}</td>
+      <td>${t.assignee_name || 'Unassigned'}</td>
       <td>${formatDate(t.due_date)}</td>
       <td>
         <button class="btn btn-ghost btn-sm" onclick="editTask(${t.id})" data-testid="edit-task-${t.id}">✏️</button>
@@ -407,13 +403,18 @@ async function loadTaskList() {
 // TASK DETAIL
 // ─────────────────────────────────────────────────────────────
 
+let previousPage = 'list';
+
 function openTaskDetail(taskId) {
   currentDetailTaskId = taskId;
+  if (currentPage !== 'detail') {
+    previousPage = currentPage;
+  }
   navigateTo('detail');
 }
 
 document.getElementById('back-to-list-btn').addEventListener('click', () => {
-  navigateTo(currentPage === 'detail' ? 'list' : currentPage);
+  navigateTo(previousPage || 'list');
 });
 
 async function loadTaskDetail(taskId) {
