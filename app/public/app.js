@@ -46,7 +46,7 @@ function formatDate(dateStr) {
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const email = document.getElementById('login-email').value;
+  const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
   const errorEl = document.getElementById('login-error');
 
@@ -73,8 +73,8 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 
 document.getElementById('register-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const name = document.getElementById('reg-name').value;
-  const email = document.getElementById('reg-email').value;
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
   const password = document.getElementById('reg-password').value;
   const errorEl = document.getElementById('register-error');
 
@@ -130,10 +130,18 @@ function logout() {
   currentUser = null;
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('auth-view').style.display = 'flex';
-  // Clear form fields
+  // Clear login form fields
   document.getElementById('login-email').value = '';
   document.getElementById('login-password').value = '';
   document.getElementById('login-error').style.display = 'none';
+
+  // Clear registration form fields and reset to login view
+  document.getElementById('reg-name').value = '';
+  document.getElementById('reg-email').value = '';
+  document.getElementById('reg-password').value = '';
+  document.getElementById('register-error').style.display = 'none';
+  document.getElementById('register-form').style.display = 'none';
+  document.getElementById('login-form').style.display = 'block';
 }
 document.getElementById('logout-btn').addEventListener('click', logout);
 

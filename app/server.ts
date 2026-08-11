@@ -53,8 +53,9 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
 // ─────────────────────────────────────────────────────────────
 
 app.post('/api/v1/auth/login', (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  let { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+  if (typeof email === 'string') email = email.trim();
 
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as any;
   if (!user || user.password !== hashPassword(password)) {
@@ -71,8 +72,17 @@ app.post('/api/v1/auth/login', (req: Request, res: Response) => {
 });
 
 app.post('/api/v1/auth/register', (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
+  let { name, email, password } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: 'Name, email, and password are required' });
+  
+  if (typeof name !== 'string') return res.status(400).json({ error: 'Invalid name' });
+  name = name.trim();
+  if (name.length > 10) return res.status(400).json({ error: 'Name cannot exceed 10 characters' });
+  if (!/^[a-zA-Z0-9 ]+$/.test(name)) {
+    return res.status(400).json({ error: 'Name can only contain letters, numbers, and spaces' });
+  }
+
+  if (typeof email === 'string') email = email.trim();
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
