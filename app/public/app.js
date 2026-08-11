@@ -24,7 +24,7 @@ async function apiFetch(path, options = {}) {
   // Don't set Content-Type if body is FormData
   if (options.body instanceof FormData) delete headers['Content-Type'];
   const res = await fetch(`${API}${path}`, { ...options, headers });
-  if (res.status === 401 || res.status === 403) { logout(); return null; }
+  if (res.status === 401) { logout(); return null; }
   return res;
 }
 
@@ -668,15 +668,26 @@ async function updateUserRole(userId, role) {
     method: 'PUT',
     body: JSON.stringify({ role }),
   });
-  if (res && res.ok) showToast('User role updated');
+  if (!res) return;
+  const data = await res.json();
+  if (res.ok) {
+    showToast('User role updated');
+  } else {
+    showToast(data.error || 'Permission denied');
+    loadUsers();
+  }
 }
 
 async function deleteUser(userId) {
   showConfirmModal('Are you sure you want to delete this user?', async () => {
     const res = await apiFetch(`/users/${userId}`, { method: 'DELETE' });
-    if (res && res.ok) {
+    if (!res) return;
+    const data = await res.json();
+    if (res.ok) {
       showToast('User deleted');
       loadUsers();
+    } else {
+      showToast(data.error || 'Permission denied');
     }
   });
 }

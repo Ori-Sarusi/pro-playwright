@@ -224,6 +224,11 @@ app.put('/api/v1/tasks/:id', authenticateToken, (req: AuthRequest, res: Response
   const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id) as any;
   if (!task) return res.status(404).json({ error: 'Task not found' });
 
+  // Role check: Members can only update their own tasks
+  if (req.user!.role === 'member' && task.created_by !== req.user!.id) {
+    return res.status(403).json({ error: 'Forbidden: Members can only modify their own tasks' });
+  }
+
   const { title, description, status, priority, assignee_id, due_date, tags } = req.body;
 
   db.prepare(`
@@ -246,8 +251,13 @@ app.put('/api/v1/tasks/:id', authenticateToken, (req: AuthRequest, res: Response
 
 // DELETE /api/v1/tasks/:id — Delete task
 app.delete('/api/v1/tasks/:id', authenticateToken, (req: AuthRequest, res: Response) => {
-  const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
+  const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id) as any;
   if (!task) return res.status(404).json({ error: 'Task not found' });
+
+  // Role check: Members can only delete their own tasks
+  if (req.user!.role === 'member' && task.created_by !== req.user!.id) {
+    return res.status(403).json({ error: 'Forbidden: Members can only delete their own tasks' });
+  }
 
   db.prepare('DELETE FROM tasks WHERE id = ?').run(req.params.id);
   res.json({ message: 'Task deleted', id: Number(req.params.id) });
@@ -336,6 +346,12 @@ app.put('/api/v1/users/:id', authenticateToken, (req: AuthRequest, res: Response
   if (!user) return res.status(404).json({ error: 'User not found' });
 
   const { name, email, role } = req.body;
+
+  // Role check: Only admin can change user roles
+  if (role !== undefined && role !== user.role && req.user!.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden: Only administrators can modify user roles' });
+  }
+
   db.prepare("UPDATE users SET name = ?, email = ?, role = ?, updated_at = datetime('now') WHERE id = ?").run(
     name ?? user.name, email ?? user.email, role ?? user.role, req.params.id
   );
@@ -345,6 +361,11 @@ app.put('/api/v1/users/:id', authenticateToken, (req: AuthRequest, res: Response
 });
 
 app.delete('/api/v1/users/:id', authenticateToken, (req: AuthRequest, res: Response) => {
+  // Role check: Only admin can delete users
+  if (req.user!.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden: Only administrators can delete users' });
+  }
+
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
