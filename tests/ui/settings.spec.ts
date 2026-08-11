@@ -39,6 +39,12 @@ test.describe('Settings Suite @settings', () => {
     await loginPage.login(newEmail, config.users.admin.password);
     await expect(basePage.appShell).toBeVisible();
     await basePage.verifyUserBadge(newName, config.users.admin.role);
+
+    // 5. Teardown: Restore original Admin profile details to preserve test isolation
+    await settingsPage.navigateTo('settings');
+    await settingsPage.verifySettingsPageLoaded();
+    await settingsPage.updateProfile(config.users.admin.name, config.users.admin.email);
+    await settingsPage.expectToastMessage('Profile saved');
   });
 
   // ═══════════════════════════════════════════════════════════
