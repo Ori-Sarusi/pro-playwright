@@ -54,7 +54,6 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
 // ─────────────────────────────────────────────────────────────
 
 app.post('/api/v1/auth/login', (req: Request, res: Response) => {
-  seedDatabase();
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
 

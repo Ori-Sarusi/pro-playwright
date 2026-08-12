@@ -82,6 +82,9 @@ function hashPassword(password: string): string {
 }
 
 export function seedDatabase() {
+  const adminExists = db.prepare('SELECT 1 FROM users WHERE email = ?').get('admin@taskflow.com');
+  if (adminExists) return;
+
   const insertUser = db.prepare(`
     INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)
     ON CONFLICT(email) DO UPDATE SET name=excluded.name, password=excluded.password, role=excluded.role
@@ -98,7 +101,9 @@ export function seedDatabase() {
   for (const u of users) {
     insertUser.run(u.name, u.email, u.password, u.role);
   }
-}
+
+  const taskCount = (db.prepare('SELECT COUNT(*) as count FROM tasks').get() as any).count;
+  if (taskCount > 0) return;
 
   // ── Tasks ──
   const insertTask = db.prepare(`
