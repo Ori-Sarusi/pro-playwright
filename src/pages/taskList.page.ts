@@ -105,7 +105,7 @@ export class TaskListPage extends BasePage {
   }
 
   async getTableTaskTitles(): Promise<string[]> {
-    const titleLinks = this.tasksTableBody.locator('.task-link');
+    const titleLinks = this.tasksTableBody.locator('a[data-testid^="task-title-"]');
     const texts = await titleLinks.allTextContents();
     return texts.map(t => t.trim()).filter(Boolean);
   }
@@ -117,7 +117,7 @@ export class TaskListPage extends BasePage {
   // ─── Row Actions ────────────────────────────────────────
 
   async clickTaskTitleByText(title: string): Promise<void> {
-    await this.tasksTableBody.locator('.task-link', { hasText: title }).click();
+    await this.tasksTableBody.locator('a[data-testid^="task-title-"]', { hasText: title }).click();
   }
 
   async editTaskById(taskId: number): Promise<void> {

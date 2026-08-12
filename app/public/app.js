@@ -67,9 +67,13 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     currentUser = data.user;
 
     if (rememberMe) {
+      localStorage.setItem('taskflow_remember', 'true');
       localStorage.setItem('taskflow_token', token);
       localStorage.setItem('taskflow_user', JSON.stringify(currentUser));
     } else {
+      localStorage.removeItem('taskflow_remember');
+      localStorage.removeItem('taskflow_token');
+      localStorage.removeItem('taskflow_user');
       sessionStorage.setItem('taskflow_token', token);
       sessionStorage.setItem('taskflow_user', JSON.stringify(currentUser));
     }
@@ -122,7 +126,6 @@ document.getElementById('show-login-link').addEventListener('click', (e) => {
 });
 
 function enterApp() {
-  sessionStorage.removeItem('taskflow_logged_out');
   document.getElementById('auth-view').style.display = 'none';
   document.getElementById('app-shell').style.display = 'flex';
 
@@ -139,11 +142,11 @@ function enterApp() {
 function logout() {
   token = null;
   currentUser = null;
+  localStorage.removeItem('taskflow_remember');
   localStorage.removeItem('taskflow_token');
   localStorage.removeItem('taskflow_user');
   sessionStorage.removeItem('taskflow_token');
   sessionStorage.removeItem('taskflow_user');
-  sessionStorage.setItem('taskflow_logged_out', 'true');
 
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('auth-view').style.display = 'flex';
@@ -163,9 +166,14 @@ function logout() {
 }
 
 function initAuth() {
-  if (sessionStorage.getItem('taskflow_logged_out') === 'true') return;
-  const savedToken = localStorage.getItem('taskflow_token') || sessionStorage.getItem('taskflow_token');
-  const savedUser = localStorage.getItem('taskflow_user') || sessionStorage.getItem('taskflow_user');
+  const isRemembered = localStorage.getItem('taskflow_remember') === 'true';
+  const savedToken = isRemembered
+    ? (localStorage.getItem('taskflow_token') || sessionStorage.getItem('taskflow_token'))
+    : sessionStorage.getItem('taskflow_token');
+  const savedUser = isRemembered
+    ? (localStorage.getItem('taskflow_user') || sessionStorage.getItem('taskflow_user'))
+    : sessionStorage.getItem('taskflow_user');
+
   if (savedToken && savedUser && !token) {
     try {
       token = savedToken;
