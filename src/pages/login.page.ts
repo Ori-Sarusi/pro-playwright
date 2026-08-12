@@ -84,7 +84,12 @@ export class LoginPage {
   }
 
   async switchToLogin(): Promise<void> {
-    await this.showLoginLink.click();
+    if (await this.authView.isHidden()) {
+      await this.goto();
+    }
+    if (await this.loginForm.isHidden()) {
+      await this.showLoginLink.click();
+    }
     await expect(this.loginForm).toBeVisible();
   }
 

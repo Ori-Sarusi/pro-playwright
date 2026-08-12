@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import path from 'path';
 import multer from 'multer';
 import fs from 'fs';
-import db, { hashPassword } from './db';
+import db, { hashPassword, seedDatabase } from './db';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,6 +45,7 @@ function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) 
 // ─────────────────────────────────────────────────────────────
 
 app.get('/api/v1/health', (_req: Request, res: Response) => {
+  seedDatabase();
   res.json({ status: 'UP', app: 'TaskFlow Pro', version: '1.0.0' });
 });
 
@@ -53,9 +54,9 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
 // ─────────────────────────────────────────────────────────────
 
 app.post('/api/v1/auth/login', (req: Request, res: Response) => {
-  let { email, password } = req.body;
+  seedDatabase();
+  const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
-  if (typeof email === 'string') email = email.trim();
 
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as any;
   if (!user || user.password !== hashPassword(password)) {
@@ -77,7 +78,7 @@ app.post('/api/v1/auth/register', (req: Request, res: Response) => {
   
   if (typeof name !== 'string') return res.status(400).json({ error: 'Invalid name' });
   name = name.trim();
-  if (name.length > 50) return res.status(400).json({ error: 'Name cannot exceed 50 characters' });
+  if (name.length > 10) return res.status(400).json({ error: 'Name cannot exceed 10 characters' });
   if (!/^[a-zA-Z0-9 ]+$/.test(name)) {
     return res.status(400).json({ error: 'Name contains invalid characters' });
   }

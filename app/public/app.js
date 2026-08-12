@@ -24,7 +24,7 @@ async function apiFetch(path, options = {}) {
   // Don't set Content-Type if body is FormData
   if (options.body instanceof FormData) delete headers['Content-Type'];
   const res = await fetch(`${API}${path}`, { ...options, headers });
-  if (res.status === 401) { logout(); return null; }
+  if (res.status === 401 || res.status === 403) { logout(); return null; }
   return res;
 }
 
@@ -46,7 +46,7 @@ function formatDate(dateStr) {
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const email = document.getElementById('login-email').value.trim();
+  const email = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
   const rememberMe = document.getElementById('remember-me').checked;
   const errorEl = document.getElementById('login-error');
@@ -74,8 +74,8 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       localStorage.removeItem('taskflow_remember');
       localStorage.removeItem('taskflow_token');
       localStorage.removeItem('taskflow_user');
-      sessionStorage.setItem('taskflow_token', token);
-      sessionStorage.setItem('taskflow_user', JSON.stringify(currentUser));
+      sessionStorage.removeItem('taskflow_token');
+      sessionStorage.removeItem('taskflow_user');
     }
 
     enterApp();
@@ -294,7 +294,7 @@ function setupDragAndDrop(container, status) {
     if (!taskId) return;
 
     const originalCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
-    if (originalCard && originalCard.closest('.cards-container') === container) {
+    if (originalCard && (originalCard.closest('.column-cards') === container || originalCard.parentElement === container)) {
       return;
     }
 
@@ -625,6 +625,12 @@ document.getElementById('task-form').addEventListener('submit', async (e) => {
     if (currentPage === 'board') loadBoard();
     else if (currentPage === 'list') loadTaskList();
     else if (currentPage === 'dashboard') loadDashboard();
+  } else {
+    closeTaskModal();
+    if (res) {
+      const data = await res.json();
+      showToast(data.error || 'Permission denied');
+    }
   }
 });
 
@@ -660,9 +666,14 @@ document.getElementById('confirm-ok').addEventListener('click', async () => {
 async function deleteTask(taskId) {
   showConfirmModal('Are you sure you want to delete this task?', async () => {
     const res = await apiFetch(`/tasks/${taskId}`, { method: 'DELETE' });
-    if (res && res.ok) {
+    if (!res) return;
+    const data = await res.json();
+    if (res.ok) {
       showToast('Task deleted');
       loadTaskList();
+      if (currentPage === 'board') loadBoard();
+    } else {
+      showToast(data.error || 'Permission denied');
     }
   });
 }

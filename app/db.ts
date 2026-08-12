@@ -81,13 +81,10 @@ function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-function seedDatabase() {
-  const userCount = (db.prepare('SELECT COUNT(*) as count FROM users').get() as any).count;
-  if (userCount > 0) return; // Already seeded
-
-  // ── Users ──
+export function seedDatabase() {
   const insertUser = db.prepare(`
     INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)
+    ON CONFLICT(email) DO UPDATE SET name=excluded.name, password=excluded.password, role=excluded.role
   `);
 
   const users = [
@@ -98,12 +95,10 @@ function seedDatabase() {
     { name: 'Michael Park', email: 'michael@taskflow.com', password: hashPassword('Member123!'), role: 'member' },
   ];
 
-  const insertUsers = db.transaction(() => {
-    for (const u of users) {
-      insertUser.run(u.name, u.email, u.password, u.role);
-    }
-  });
-  insertUsers();
+  for (const u of users) {
+    insertUser.run(u.name, u.email, u.password, u.role);
+  }
+}
 
   // ── Tasks ──
   const insertTask = db.prepare(`

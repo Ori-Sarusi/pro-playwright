@@ -22,17 +22,17 @@ test.describe('Registration Tests @auth', () => {
 
   test('Registration auto-logs in the user after success', async ({ loginPage, basePage }) => {
     const uniqueEmail = `autouser_${Date.now()}@taskflow.com`;
-    await loginPage.registerNameInput.fill('Auto Login User');
+    await loginPage.registerNameInput.fill('Auto Login');
     await loginPage.registerEmailInput.fill(uniqueEmail);
     await loginPage.registerPasswordInput.fill('AutoPass123!');
     await loginPage.registerButton.click();
-    await basePage.verifyUserBadge('Auto Login User', 'member');
+    await basePage.verifyUserBadge('Auto Login', 'member');
     await basePage.verifyPageTitle('Dashboard');
   });
 
   test('New registered user gets "member" role by default', async ({ loginPage, basePage }) => {
     const uniqueEmail = `member_${Date.now()}@taskflow.com`;
-    await loginPage.registerNameInput.fill('Member User');
+    await loginPage.registerNameInput.fill('Member');
     await loginPage.registerEmailInput.fill(uniqueEmail);
     await loginPage.registerPasswordInput.fill('MemberPass1!');
     await loginPage.registerButton.click();
