@@ -24,7 +24,7 @@ async function apiFetch(path, options = {}) {
   // Don't set Content-Type if body is FormData
   if (options.body instanceof FormData) delete headers['Content-Type'];
   const res = await fetch(`${API}${path}`, { ...options, headers });
-  if (res.status === 401 || res.status === 403) { logout(); return null; }
+  if (res.status === 401) { logout(); return null; }
   return res;
 }
 
@@ -46,8 +46,9 @@ function formatDate(dateStr) {
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const email = document.getElementById('login-email').value;
+  const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
+  const rememberMe = document.getElementById('remember-me').checked;
   const errorEl = document.getElementById('login-error');
 
   try {
@@ -64,6 +65,19 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     }
     token = data.token;
     currentUser = data.user;
+
+    if (rememberMe) {
+      localStorage.setItem('taskflow_remember', 'true');
+      localStorage.setItem('taskflow_token', token);
+      localStorage.setItem('taskflow_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('taskflow_remember');
+      localStorage.removeItem('taskflow_token');
+      localStorage.removeItem('taskflow_user');
+      sessionStorage.setItem('taskflow_token', token);
+      sessionStorage.setItem('taskflow_user', JSON.stringify(currentUser));
+    }
+
     enterApp();
   } catch (err) {
     errorEl.textContent = 'Network error. Please try again.';
@@ -73,8 +87,8 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 
 document.getElementById('register-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const name = document.getElementById('reg-name').value;
-  const email = document.getElementById('reg-email').value;
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
   const password = document.getElementById('reg-password').value;
   const errorEl = document.getElementById('register-error');
 
@@ -128,13 +142,49 @@ function enterApp() {
 function logout() {
   token = null;
   currentUser = null;
+  localStorage.removeItem('taskflow_remember');
+  localStorage.removeItem('taskflow_token');
+  localStorage.removeItem('taskflow_user');
+  sessionStorage.removeItem('taskflow_token');
+  sessionStorage.removeItem('taskflow_user');
+
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('auth-view').style.display = 'flex';
-  // Clear form fields
+  // Clear login form fields
   document.getElementById('login-email').value = '';
   document.getElementById('login-password').value = '';
+  document.getElementById('remember-me').checked = false;
   document.getElementById('login-error').style.display = 'none';
+
+  // Clear registration form fields and reset to login view
+  document.getElementById('reg-name').value = '';
+  document.getElementById('reg-email').value = '';
+  document.getElementById('reg-password').value = '';
+  document.getElementById('register-error').style.display = 'none';
+  document.getElementById('register-form').style.display = 'none';
+  document.getElementById('login-form').style.display = 'block';
 }
+
+function initAuth() {
+  const isRemembered = localStorage.getItem('taskflow_remember') === 'true';
+  const savedToken = isRemembered
+    ? (localStorage.getItem('taskflow_token') || sessionStorage.getItem('taskflow_token'))
+    : sessionStorage.getItem('taskflow_token');
+  const savedUser = isRemembered
+    ? (localStorage.getItem('taskflow_user') || sessionStorage.getItem('taskflow_user'))
+    : sessionStorage.getItem('taskflow_user');
+
+  if (savedToken && savedUser && !token) {
+    try {
+      token = savedToken;
+      currentUser = JSON.parse(savedUser);
+      enterApp();
+    } catch (e) {
+      logout();
+    }
+  }
+}
+document.addEventListener('DOMContentLoaded', initAuth);
 document.getElementById('logout-btn').addEventListener('click', logout);
 
 // ─────────────────────────────────────────────────────────────
@@ -242,6 +292,12 @@ function setupDragAndDrop(container, status) {
     container.style.background = '';
     const taskId = e.dataTransfer.getData('text/plain');
     if (!taskId) return;
+
+    const originalCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+    if (originalCard && originalCard.closest('.cards-container') === container) {
+      return;
+    }
+
     const res = await apiFetch(`/tasks/${taskId}`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
@@ -306,10 +362,11 @@ function updateBulkBar() {
 
 document.getElementById('bulk-delete-btn').addEventListener('click', async () => {
   if (selectedTaskIds.size === 0) return;
+  const count = selectedTaskIds.size;
   for (const id of selectedTaskIds) {
     await apiFetch(`/tasks/${id}`, { method: 'DELETE' });
   }
-  showToast(`Deleted ${selectedTaskIds.size} tasks`);
+  showToast(`Deleted ${count} tasks`);
   selectedTaskIds.clear();
   updateBulkBar();
   loadTaskList();
@@ -329,14 +386,31 @@ async function loadTaskList() {
   if (!res) return;
   const data = await res.json();
 
+  renderTaskRows(data.data || []);
+
+  // Pagination
+  const { page: pg, totalPages } = data.pagination || { page: 1, totalPages: 1 };
+  const pag = document.getElementById('pagination');
+  let pagHtml = '';
+  for (let i = 1; i <= totalPages; i++) {
+    pagHtml += `<button class="page-btn ${i === pg ? 'active' : ''}" data-testid="page-${i}" onclick="listPage=${i}; loadTaskList();">${i}</button>`;
+  }
+  pag.innerHTML = pagHtml;
+}
+
+function renderTaskRows(data) {
   const tbody = document.getElementById('tasks-table-body');
-  tbody.innerHTML = data.data.map(t => `
+  tbody.innerHTML = data.map(t => `
     <tr data-testid="task-row-${t.id}">
-      <td><input type="checkbox" class="row-checkbox" data-task-id="${t.id}" data-testid="task-checkbox-${t.id}" ${selectedTaskIds.has(t.id) ? 'checked' : ''} /></td>
-      <td><a href="#" class="task-link" onclick="openTaskDetail(${t.id}); return false;" data-testid="task-link-${t.id}">${t.title}</a></td>
+      <td>
+        <input type="checkbox" class="row-checkbox" data-task-id="${t.id}" data-testid="task-checkbox-${t.id}" ${selectedTaskIds.has(t.id) ? 'checked' : ''} />
+      </td>
+      <td>
+        <a href="#" onclick="event.preventDefault(); openTaskDetail(${t.id})" data-testid="task-title-${t.id}" style="font-weight:600; color:var(--accent); text-decoration:none;">${t.title}</a>
+      </td>
       <td><span class="badge badge-${t.status}">${t.status}</span></td>
       <td><span class="badge badge-${t.priority}">${t.priority}</span></td>
-      <td>${t.assignee_name || '—'}</td>
+      <td>${t.assignee_name || 'Unassigned'}</td>
       <td>${formatDate(t.due_date)}</td>
       <td>
         <button class="btn btn-ghost btn-sm" onclick="editTask(${t.id})" data-testid="edit-task-${t.id}">✏️</button>
@@ -353,28 +427,24 @@ async function loadTaskList() {
       updateBulkBar();
     });
   });
-
-  // Pagination
-  const { page: pg, totalPages } = data.pagination;
-  const pag = document.getElementById('pagination');
-  let pagHtml = '';
-  for (let i = 1; i <= totalPages; i++) {
-    pagHtml += `<button class="page-btn ${i === pg ? 'active' : ''}" data-testid="page-${i}" onclick="listPage=${i}; loadTaskList();">${i}</button>`;
-  }
-  pag.innerHTML = pagHtml;
 }
 
 // ─────────────────────────────────────────────────────────────
 // TASK DETAIL
 // ─────────────────────────────────────────────────────────────
 
+let previousPage = 'list';
+
 function openTaskDetail(taskId) {
   currentDetailTaskId = taskId;
+  if (currentPage !== 'detail') {
+    previousPage = currentPage;
+  }
   navigateTo('detail');
 }
 
 document.getElementById('back-to-list-btn').addEventListener('click', () => {
-  navigateTo(currentPage === 'detail' ? 'list' : currentPage);
+  navigateTo(previousPage || 'list');
 });
 
 async function loadTaskDetail(taskId) {
@@ -629,15 +699,26 @@ async function updateUserRole(userId, role) {
     method: 'PUT',
     body: JSON.stringify({ role }),
   });
-  if (res && res.ok) showToast('User role updated');
+  if (!res) return;
+  const data = await res.json();
+  if (res.ok) {
+    showToast('User role updated');
+  } else {
+    showToast(data.error || 'Permission denied');
+    loadUsers();
+  }
 }
 
 async function deleteUser(userId) {
   showConfirmModal('Are you sure you want to delete this user?', async () => {
     const res = await apiFetch(`/users/${userId}`, { method: 'DELETE' });
-    if (res && res.ok) {
+    if (!res) return;
+    const data = await res.json();
+    if (res.ok) {
       showToast('User deleted');
       loadUsers();
+    } else {
+      showToast(data.error || 'Permission denied');
     }
   });
 }

@@ -53,8 +53,9 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
 // ─────────────────────────────────────────────────────────────
 
 app.post('/api/v1/auth/login', (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  let { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+  if (typeof email === 'string') email = email.trim();
 
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as any;
   if (!user || user.password !== hashPassword(password)) {
@@ -71,8 +72,17 @@ app.post('/api/v1/auth/login', (req: Request, res: Response) => {
 });
 
 app.post('/api/v1/auth/register', (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
+  let { name, email, password } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: 'Name, email, and password are required' });
+  
+  if (typeof name !== 'string') return res.status(400).json({ error: 'Invalid name' });
+  name = name.trim();
+  if (name.length > 50) return res.status(400).json({ error: 'Name cannot exceed 50 characters' });
+  if (!/^[a-zA-Z0-9 ]+$/.test(name)) {
+    return res.status(400).json({ error: 'Name contains invalid characters' });
+  }
+
+  if (typeof email === 'string') email = email.trim();
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
@@ -99,7 +109,7 @@ app.get('/api/v1/dashboard/stats', authenticateToken, (_req: AuthRequest, res: R
   const todo = (db.prepare("SELECT COUNT(*) as count FROM tasks WHERE status = 'todo'").get() as any).count;
   const inProgress = (db.prepare("SELECT COUNT(*) as count FROM tasks WHERE status = 'in-progress'").get() as any).count;
   const done = (db.prepare("SELECT COUNT(*) as count FROM tasks WHERE status = 'done'").get() as any).count;
-  const overdue = (db.prepare("SELECT COUNT(*) as count FROM tasks WHERE due_date < date('now') AND status != 'done'").get() as any).count;
+  const overdue = (db.prepare("SELECT COUNT(*) as count FROM tasks WHERE due_date IS NOT NULL AND due_date < date('now') AND status != 'done'").get() as any).count;
 
   res.json({ total, todo, inProgress, done, overdue });
 });
@@ -110,6 +120,8 @@ app.get('/api/v1/dashboard/stats', authenticateToken, (_req: AuthRequest, res: R
 
 // GET /api/v1/tasks — List tasks with optional filters
 app.get('/api/v1/tasks', authenticateToken, (req: AuthRequest, res: Response) => {
+  const { search, status, priority, sort = 'created_at', order = 'desc', page = '1', limit = '10' } = req.query;
+
   let query = `
     SELECT t.*, u.name as assignee_name
     FROM tasks t
@@ -118,25 +130,27 @@ app.get('/api/v1/tasks', authenticateToken, (req: AuthRequest, res: Response) =>
   `;
   const params: any[] = [];
 
-  if (req.query.status) { query += ' AND t.status = ?'; params.push(req.query.status); }
-  if (req.query.priority) { query += ' AND t.priority = ?'; params.push(req.query.priority); }
-  if (req.query.assignee_id) { query += ' AND t.assignee_id = ?'; params.push(req.query.assignee_id); }
-  if (req.query.search) { query += ' AND (t.title LIKE ? OR t.description LIKE ?)'; params.push(`%${req.query.search}%`, `%${req.query.search}%`); }
-
-  // Sorting
-  const sortField = (req.query.sort as string) || 'created_at';
-  const sortOrder = (req.query.order as string) === 'asc' ? 'ASC' : 'DESC';
-  const allowedSorts = ['title', 'priority', 'status', 'due_date', 'created_at'];
-  if (allowedSorts.includes(sortField)) {
-    query += ` ORDER BY t.${sortField} ${sortOrder}`;
+  if (search) {
+    query += ' AND (t.title LIKE ? OR t.description LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`);
+  }
+  if (status) {
+    query += ' AND t.status = ?';
+    params.push(status);
+  }
+  if (priority) {
+    query += ' AND t.priority = ?';
+    params.push(priority);
   }
 
-  // Pagination
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
-  const offset = (page - 1) * limit;
+  const allowedSorts = ['title', 'status', 'priority', 'due_date', 'created_at'];
+  const sortCol = allowedSorts.includes(String(sort)) ? String(sort) : 'created_at';
+  const sortOrder = String(order).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-  const countQuery = query.replace(/SELECT t\.\*, u\.name as assignee_name/, 'SELECT COUNT(*) as total');
+  query += ` ORDER BY t.${sortCol} ${sortOrder}`;
+
+  const offset = (Number(page) - 1) * Number(limit);
+  const countQuery = `SELECT COUNT(*) as total FROM (${query})`;
   const totalResult = db.prepare(countQuery).get(...params) as any;
 
   query += ' LIMIT ? OFFSET ?';
@@ -147,10 +161,10 @@ app.get('/api/v1/tasks', authenticateToken, (req: AuthRequest, res: Response) =>
   res.json({
     data: tasks,
     pagination: {
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
       total: totalResult.total,
-      totalPages: Math.ceil(totalResult.total / limit),
+      totalPages: Math.ceil(totalResult.total / Number(limit)),
     },
   });
 });
@@ -214,6 +228,11 @@ app.put('/api/v1/tasks/:id', authenticateToken, (req: AuthRequest, res: Response
   const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id) as any;
   if (!task) return res.status(404).json({ error: 'Task not found' });
 
+  // Role check: Members can only update their own tasks
+  if (req.user!.role === 'member' && task.created_by !== req.user!.id) {
+    return res.status(403).json({ error: 'Forbidden: Members can only modify their own tasks' });
+  }
+
   const { title, description, status, priority, assignee_id, due_date, tags } = req.body;
 
   db.prepare(`
@@ -236,8 +255,13 @@ app.put('/api/v1/tasks/:id', authenticateToken, (req: AuthRequest, res: Response
 
 // DELETE /api/v1/tasks/:id — Delete task
 app.delete('/api/v1/tasks/:id', authenticateToken, (req: AuthRequest, res: Response) => {
-  const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
+  const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id) as any;
   if (!task) return res.status(404).json({ error: 'Task not found' });
+
+  // Role check: Members can only delete their own tasks
+  if (req.user!.role === 'member' && task.created_by !== req.user!.id) {
+    return res.status(403).json({ error: 'Forbidden: Members can only delete their own tasks' });
+  }
 
   db.prepare('DELETE FROM tasks WHERE id = ?').run(req.params.id);
   res.json({ message: 'Task deleted', id: Number(req.params.id) });
@@ -326,6 +350,12 @@ app.put('/api/v1/users/:id', authenticateToken, (req: AuthRequest, res: Response
   if (!user) return res.status(404).json({ error: 'User not found' });
 
   const { name, email, role } = req.body;
+
+  // Role check: Only admin can change user roles
+  if (role !== undefined && role !== user.role && req.user!.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden: Only administrators can modify user roles' });
+  }
+
   db.prepare("UPDATE users SET name = ?, email = ?, role = ?, updated_at = datetime('now') WHERE id = ?").run(
     name ?? user.name, email ?? user.email, role ?? user.role, req.params.id
   );
@@ -335,6 +365,11 @@ app.put('/api/v1/users/:id', authenticateToken, (req: AuthRequest, res: Response
 });
 
 app.delete('/api/v1/users/:id', authenticateToken, (req: AuthRequest, res: Response) => {
+  // Role check: Only admin can delete users
+  if (req.user!.role !== 'admin') {
+    return res.status(403).json({ error: 'Forbidden: Only administrators can delete users' });
+  }
+
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
