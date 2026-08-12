@@ -77,7 +77,7 @@ app.post('/api/v1/auth/register', (req: Request, res: Response) => {
   
   if (typeof name !== 'string') return res.status(400).json({ error: 'Invalid name' });
   name = name.trim();
-  if (name.length > 10) return res.status(400).json({ error: 'Name cannot exceed 10 characters' });
+  if (name.length > 50) return res.status(400).json({ error: 'Name cannot exceed 50 characters' });
   if (!/^[a-zA-Z0-9 ]+$/.test(name)) {
     return res.status(400).json({ error: 'Name contains invalid characters' });
   }

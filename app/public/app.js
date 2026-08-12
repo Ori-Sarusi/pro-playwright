@@ -122,6 +122,7 @@ document.getElementById('show-login-link').addEventListener('click', (e) => {
 });
 
 function enterApp() {
+  sessionStorage.removeItem('taskflow_logged_out');
   document.getElementById('auth-view').style.display = 'none';
   document.getElementById('app-shell').style.display = 'flex';
 
@@ -142,6 +143,7 @@ function logout() {
   localStorage.removeItem('taskflow_user');
   sessionStorage.removeItem('taskflow_token');
   sessionStorage.removeItem('taskflow_user');
+  sessionStorage.setItem('taskflow_logged_out', 'true');
 
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('auth-view').style.display = 'flex';
@@ -161,8 +163,9 @@ function logout() {
 }
 
 function initAuth() {
-  const savedToken = sessionStorage.getItem('taskflow_token') || localStorage.getItem('taskflow_token');
-  const savedUser = sessionStorage.getItem('taskflow_user') || localStorage.getItem('taskflow_user');
+  if (sessionStorage.getItem('taskflow_logged_out') === 'true') return;
+  const savedToken = localStorage.getItem('taskflow_token') || sessionStorage.getItem('taskflow_token');
+  const savedUser = localStorage.getItem('taskflow_user') || sessionStorage.getItem('taskflow_user');
   if (savedToken && savedUser && !token) {
     try {
       token = savedToken;
