@@ -362,9 +362,11 @@ function updateBulkBar() {
 
 document.getElementById('bulk-delete-btn').addEventListener('click', async () => {
   if (selectedTaskIds.size === 0) return;
+  const count = selectedTaskIds.size;
   for (const id of selectedTaskIds) {
     await apiFetch(`/tasks/${id}`, { method: 'DELETE' });
   }
+  showToast(`Deleted ${count} tasks`);
   selectedTaskIds.clear();
   updateBulkBar();
   loadTaskList();

@@ -62,6 +62,9 @@ export class LoginPage {
 
   async goto(): Promise<void> {
     await this.page.goto('/');
+    if (await this.page.getByTestId('app-shell').isVisible()) {
+      await this.page.getByTestId('logout-btn').click();
+    }
     await expect(this.authView).toBeVisible();
   }
 
