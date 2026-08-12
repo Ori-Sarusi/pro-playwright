@@ -362,8 +362,34 @@ document.getElementById('bulk-delete-btn').addEventListener('click', async () =>
   loadTaskList();
 });
 
+async function loadTaskList() {
+  const search = document.getElementById('search-input').value;
+  const status = document.getElementById('filter-status').value;
+  const priority = document.getElementById('filter-priority').value;
+
+  let url = `/tasks?page=${listPage}&limit=10&sort=${listSort}&order=${listOrder}`;
+  if (search) url += `&search=${encodeURIComponent(search)}`;
+  if (status) url += `&status=${status}`;
+  if (priority) url += `&priority=${priority}`;
+
+  const res = await apiFetch(url);
+  if (!res) return;
+  const data = await res.json();
+
+  renderTaskRows(data.data || []);
+
+  // Pagination
+  const { page: pg, totalPages } = data.pagination || { page: 1, totalPages: 1 };
+  const pag = document.getElementById('pagination');
+  let pagHtml = '';
+  for (let i = 1; i <= totalPages; i++) {
+    pagHtml += `<button class="page-btn ${i === pg ? 'active' : ''}" data-testid="page-${i}" onclick="listPage=${i}; loadTaskList();">${i}</button>`;
+  }
+  pag.innerHTML = pagHtml;
+}
+
 function renderTaskRows(data) {
-  const tbody = document.getElementById('task-table-body');
+  const tbody = document.getElementById('tasks-table-body');
   tbody.innerHTML = data.map(t => `
     <tr data-testid="task-row-${t.id}">
       <td>
@@ -391,15 +417,6 @@ function renderTaskRows(data) {
       updateBulkBar();
     });
   });
-
-  // Pagination
-  const { page: pg, totalPages } = data.pagination;
-  const pag = document.getElementById('pagination');
-  let pagHtml = '';
-  for (let i = 1; i <= totalPages; i++) {
-    pagHtml += `<button class="page-btn ${i === pg ? 'active' : ''}" data-testid="page-${i}" onclick="listPage=${i}; loadTaskList();">${i}</button>`;
-  }
-  pag.innerHTML = pagHtml;
 }
 
 // ─────────────────────────────────────────────────────────────
