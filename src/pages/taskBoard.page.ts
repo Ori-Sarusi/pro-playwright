@@ -77,6 +77,6 @@ export class TaskBoardPage extends BasePage {
   async dragAndDropCard(title: string, targetStatus: 'todo' | 'in-progress' | 'done'): Promise<void> {
     const card = this.getTaskCardLocator(title);
     const targetColumn = this.page.getByTestId(`cards-${targetStatus}`);
-    await card.dragTo(targetColumn);
+    await card.dragTo(targetColumn, { targetPosition: { x: 20, y: 20 } });
   }
 }

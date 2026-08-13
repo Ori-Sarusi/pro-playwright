@@ -265,7 +265,7 @@ async function loadBoard() {
     document.getElementById(`count-${status}`).textContent = tasks.length;
     const container = document.getElementById(`cards-${status}`);
     container.innerHTML = tasks.map(t => `
-      <div class="task-card" draggable="true" data-task-id="${t.id}" data-testid="task-card-${t.id}" onclick="openTaskDetail(${t.id})">
+      <div class="task-card" draggable="true" data-task-id="${t.id}" data-task-status="${t.status}" data-testid="task-card-${t.id}" onclick="openTaskDetail(${t.id})">
         <div class="task-card-title">${t.title}</div>
         <div class="task-card-meta">
           <span class="badge badge-${t.priority}">${t.priority}</span>
@@ -279,6 +279,8 @@ async function loadBoard() {
   });
 }
 
+let currentDraggingCardId = null;
+
 function setupDragAndDrop(container, status) {
   container.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -290,11 +292,13 @@ function setupDragAndDrop(container, status) {
   container.addEventListener('drop', async (e) => {
     e.preventDefault();
     container.style.background = '';
-    const taskId = e.dataTransfer.getData('text/plain');
+    const draggingCard = document.querySelector('.task-card.dragging');
+    const taskId = e.dataTransfer.getData('text/plain') || currentDraggingCardId || draggingCard?.dataset.taskId;
     if (!taskId) return;
 
-    const originalCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
-    if (originalCard && (originalCard.closest('.column-cards') === container || originalCard.parentElement === container)) {
+    const originalCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`) || draggingCard;
+    const currentStatus = originalCard?.dataset.taskStatus;
+    if (currentStatus === status || originalCard?.closest(`.column-cards`)?.id === container.id) {
       return;
     }
 
@@ -310,10 +314,14 @@ function setupDragAndDrop(container, status) {
 
   container.querySelectorAll('.task-card').forEach(card => {
     card.addEventListener('dragstart', (e) => {
+      currentDraggingCardId = card.dataset.taskId;
       e.dataTransfer.setData('text/plain', card.dataset.taskId);
       card.classList.add('dragging');
     });
-    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    card.addEventListener('dragend', () => {
+      currentDraggingCardId = null;
+      card.classList.remove('dragging');
+    });
   });
 }
 

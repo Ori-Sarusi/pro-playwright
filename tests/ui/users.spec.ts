@@ -191,7 +191,7 @@ test.describe('Role-Based Access Control (RBAC) UI Suite @users', () => {
     const managerPassword = 'ManagerPass1!';
 
     const regRes = await request.post(`${config.baseUrl}/api/v1/auth/register`, {
-      data: { name: 'MgrDelUser', email: managerEmail, password: managerPassword }
+      data: { name: 'Manager DelUserUI', email: managerEmail, password: managerPassword }
     });
     const managerUser = (await regRes.json()).user;
 
@@ -207,17 +207,8 @@ test.describe('Role-Based Access Control (RBAC) UI Suite @users', () => {
     await usersPage.navigateTo('users');
     await usersPage.verifyUsersPageLoaded();
 
-    // Get existing target user ID dynamically
-    const allUsersRes = await request.get(`${config.baseUrl}/api/v1/users`, {
-      headers: { 'Authorization': `Bearer ${tasksApi.authToken}` }
-    });
-    const allUsers = (await allUsersRes.json()).data;
-    const targetUser = allUsers.find((u: any) => u.id !== managerUser.id);
-
-    // Attempt to delete target user
-    if (targetUser) {
-      await usersPage.deleteUserById(targetUser.id);
-    }
+    // Attempt to delete user ID 6 (Ori)
+    await usersPage.deleteUserById(6);
 
     // App logs out / rejects unauthorized delete user attempt
     await expect(loginPage.authView).toBeVisible();
@@ -244,7 +235,7 @@ test.describe('Role-Based Access Control (RBAC) UI Suite @users', () => {
   });
 
   test('Admin user can change any user role in Users management UI', async ({ loginPage, usersPage, basePage }) => {
-    const targetUserName = 'TargetUser';
+    const targetUserName = `UserToPromote_${Date.now()}`;
     const memberEmail = `to_promote_${Date.now()}@taskflow.com`;
     const memberPassword = 'PromotePass1!';
 
