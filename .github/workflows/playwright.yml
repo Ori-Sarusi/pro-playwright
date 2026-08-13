@@ -2,10 +2,9 @@ name: Playwright E2E UI Tests
 
 on:
   push:
-    branches: [ main, fixApp, '**' ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, fixApp, '**' ]
-  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
   test:
