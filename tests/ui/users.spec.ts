@@ -47,7 +47,7 @@ test.describe('Role-Based Access Control (RBAC) UI Suite @users', () => {
 
     // Register & Login as Member
     await loginPage.goto();
-    await loginPage.register('Member DelUI', memberEmail, memberPassword);
+    await loginPage.register('MbrDelUI', memberEmail, memberPassword);
     await expect(basePage.appShell).toBeVisible();
 
     // Navigate to Task List page
@@ -66,7 +66,7 @@ test.describe('Role-Based Access Control (RBAC) UI Suite @users', () => {
     const memberPassword = 'MemberPass1!';
 
     await loginPage.goto();
-    await loginPage.register('Member EditUI', memberEmail, memberPassword);
+    await loginPage.register('MbrEditUI', memberEmail, memberPassword);
     await expect(basePage.appShell).toBeVisible();
 
     await taskListPage.navigateTo('list');
@@ -87,7 +87,7 @@ test.describe('Role-Based Access Control (RBAC) UI Suite @users', () => {
     const memberPassword = 'MemberPass1!';
 
     await loginPage.goto();
-    await loginPage.register('Member NavTest', memberEmail, memberPassword);
+    await loginPage.register('MbrNavUI', memberEmail, memberPassword);
     await expect(basePage.appShell).toBeVisible();
 
     // Verify Users navigation item is visible in DOM for member
@@ -105,7 +105,7 @@ test.describe('Role-Based Access Control (RBAC) UI Suite @users', () => {
     const managerPassword = 'ManagerPass1!';
 
     const regRes = await request.post(`${config.baseUrl}/api/v1/auth/register`, {
-      data: { name: 'Manager EditUI', email: managerEmail, password: managerPassword }
+      data: { name: 'MgrEditUI', email: managerEmail, password: managerPassword }
     });
     const managerUser = (await regRes.json()).user;
 
@@ -137,7 +137,7 @@ test.describe('Role-Based Access Control (RBAC) UI Suite @users', () => {
     const managerPassword = 'ManagerPass1!';
 
     const regRes = await request.post(`${config.baseUrl}/api/v1/auth/register`, {
-      data: { name: 'Manager DelUI', email: managerEmail, password: managerPassword }
+      data: { name: 'MgrDelUI', email: managerEmail, password: managerPassword }
     });
     const managerUser = (await regRes.json()).user;
 
@@ -163,7 +163,7 @@ test.describe('Role-Based Access Control (RBAC) UI Suite @users', () => {
     const managerPassword = 'ManagerPass1!';
 
     const regRes = await request.post(`${config.baseUrl}/api/v1/auth/register`, {
-      data: { name: 'Manager RoleUI', email: managerEmail, password: managerPassword }
+      data: { name: 'MgrRoleUI', email: managerEmail, password: managerPassword }
     });
     const managerUser = (await regRes.json()).user;
 
@@ -191,7 +191,7 @@ test.describe('Role-Based Access Control (RBAC) UI Suite @users', () => {
     const managerPassword = 'ManagerPass1!';
 
     const regRes = await request.post(`${config.baseUrl}/api/v1/auth/register`, {
-      data: { name: 'Manager DelUserUI', email: managerEmail, password: managerPassword }
+      data: { name: 'MgrDelUser', email: managerEmail, password: managerPassword }
     });
     const managerUser = (await regRes.json()).user;
 
@@ -207,8 +207,17 @@ test.describe('Role-Based Access Control (RBAC) UI Suite @users', () => {
     await usersPage.navigateTo('users');
     await usersPage.verifyUsersPageLoaded();
 
-    // Attempt to delete user ID 6 (Ori)
-    await usersPage.deleteUserById(6);
+    // Get existing target user ID dynamically
+    const allUsersRes = await request.get(`${config.baseUrl}/api/v1/users`, {
+      headers: { 'Authorization': `Bearer ${tasksApi.authToken}` }
+    });
+    const allUsers = (await allUsersRes.json()).data;
+    const targetUser = allUsers.find((u: any) => u.id !== managerUser.id);
+
+    // Attempt to delete target user
+    if (targetUser) {
+      await usersPage.deleteUserById(targetUser.id);
+    }
 
     // App logs out / rejects unauthorized delete user attempt
     await expect(loginPage.authView).toBeVisible();
@@ -235,7 +244,7 @@ test.describe('Role-Based Access Control (RBAC) UI Suite @users', () => {
   });
 
   test('Admin user can change any user role in Users management UI', async ({ loginPage, usersPage, basePage }) => {
-    const targetUserName = `UserToPromote_${Date.now()}`;
+    const targetUserName = 'TargetUser';
     const memberEmail = `to_promote_${Date.now()}@taskflow.com`;
     const memberPassword = 'PromotePass1!';
 
@@ -246,7 +255,9 @@ test.describe('Role-Based Access Control (RBAC) UI Suite @users', () => {
 
     // Switch to Admin: logout first to return to login form
     await basePage.logout();
-    await loginPage.switchToLogin();
+    if (await loginPage.registerForm.isVisible()) {
+      await loginPage.switchToLogin();
+    }
     await loginPage.login(config.users.admin.email, config.users.admin.password);
 
     // Promote in Users page UI via UsersPage helper
