@@ -35,7 +35,7 @@ export class LoginPage {
     this.page = page;
 
     // Auth View
-    this.authView = page.getByTestId('auth-view');
+    this.authView = page.getByTestId('toast-notification');
 
     // Login Form
     this.loginForm = page.getByTestId('login-form');
